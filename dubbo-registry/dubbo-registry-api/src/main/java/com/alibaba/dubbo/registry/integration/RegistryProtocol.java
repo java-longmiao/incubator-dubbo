@@ -126,14 +126,20 @@ public class RegistryProtocol implements Protocol {
         registry.register(registedProviderUrl);
     }
 
+    /**
+     * 调用链：ServiceBean#afterPropertiesSet->ServiceConfig#export->ServiceConfig#doExport->ServiceConfig#doExportUrlsFor1Protocol->RegistryProtocol#export
+     */
     @Override
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
         //export invoker
+        // 启动服务提供者服务，监听指定端口，准备服务消费者的请求，这里其实就是从WrapperInvoker中的url(注册中心url)中提取export属性，描述服务提供者的url，然后启动服务提供者。
         final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker);
 
+        // 获取真实注册中心的URL,例如zookeeper注册中心的
         URL registryUrl = getRegistryUrl(originInvoker);
 
         //registry provider
+        // 根据注册中心URL，从注册中心工厂中获取指定的注册中心实现类：zookeeper注册中心的实现类为：ZookeeperRegistry
         final Registry registry = getRegistry(originInvoker);
         final URL registeredProviderUrl = getRegisteredProviderUrl(originInvoker);
 
@@ -142,6 +148,7 @@ public class RegistryProtocol implements Protocol {
 
         ProviderConsumerRegTable.registerProvider(originInvoker, registryUrl, registeredProviderUrl);
 
+        // 获取服务提供者URL中的register属性，如果为true,则调用注册中心的ZookeeperRegistry#register方法向注册中心注册服务（实际由其父类FailbackRegistry实现）。
         if (register) {
             register(registryUrl, registeredProviderUrl);
             ProviderConsumerRegTable.getProviderWrapper(originInvoker).setReg(true);
@@ -149,6 +156,7 @@ public class RegistryProtocol implements Protocol {
 
         // Subscribe the override data
         // FIXME When the provider subscribes, it will affect the scene : a certain JVM exposes the service and call the same service. Because the subscribed is cached key with the name of the service, it causes the subscription information to cover.
+        // 服务提供者向注册中心订阅自己，主要是为了服务提供者URL发送变化后重新暴露服务，当然，会将dubbo:reference的check属性设置为false。
         final URL overrideSubscribeUrl = getSubscribedOverrideUrl(registeredProviderUrl);
         final OverrideListener overrideSubscribeListener = new OverrideListener(overrideSubscribeUrl, originInvoker);
         overrideListeners.put(overrideSubscribeUrl, overrideSubscribeListener);
@@ -157,7 +165,12 @@ public class RegistryProtocol implements Protocol {
         return new DestroyableExporter<T>(exporter, originInvoker, overrideSubscribeUrl, registeredProviderUrl);
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * 可以看出，将调用DubboProtocol#export完成dubbo服务的启动，利用netty构建一个微型服务端，监听端口，
+     * 准备接受服务消费者的网络请求，本节旨在梳理其启动流程，具体实现细节，将在后续章节中详解，这里我们只要知道，
+     * < dubbo:protocol name="dubbo" port="20880" />,会再此次监听该端口，然后将dubbo:service的服务handler加入到命令处理器中，
+     * 当有消息消费者连接该端口时，通过网络解包，将需要调用的服务和参数等信息解析处理后，转交给对应的服务实现类处理即可。
+     */
     private <T> ExporterChangeableWrapper<T> doLocalExport(final Invoker<T> originInvoker) {
         String key = getCacheKey(originInvoker);
         ExporterChangeableWrapper<T> exporter = (ExporterChangeableWrapper<T>) bounds.get(key);

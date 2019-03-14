@@ -203,6 +203,14 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         return registryList;
     }
 
+    /**
+     * 如果dubbo spring xml配置文件中没有配置监控中心(dubbo:monitor),如果从系统属性-Ddubbo.monitor.address，
+     * -Ddubbo.monitor.protocol构建MonitorConfig对象，否则从dubbo的properties配置文件中寻找这个两个参数，如果没有配置，则返回null。
+     * 如果有配置，则追加相关参数，dubbo:monitor标签只有两个属性：address、protocol，其次会追加interface(MonitorService)、协议等。
+     *
+     * @param registryURL
+     * @return
+     */
     protected URL loadMonitor(URL registryURL) {
         if (monitor == null) {
             String monitorAddress = ConfigUtils.getProperty("dubbo.monitor.address");

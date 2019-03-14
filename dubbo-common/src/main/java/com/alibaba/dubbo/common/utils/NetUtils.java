@@ -115,6 +115,12 @@ public class NetUtils {
         return "0.0.0.0".equals(host);
     }
 
+    /**
+     * 判断IP地址是否不可用
+     *
+     * @param host
+     * @return
+     */
     public static boolean isInvalidLocalHost(String host) {
         return host == null
                 || host.length() == 0

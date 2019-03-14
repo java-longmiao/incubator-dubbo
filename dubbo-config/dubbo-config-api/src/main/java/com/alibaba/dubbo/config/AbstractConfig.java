@@ -89,6 +89,12 @@ public abstract class AbstractConfig implements Serializable {
         return value;
     }
 
+    /**
+     * 从系统属性加载对应参数值，参数键：dubbo.provider.属性名，可通过System.getProperty获取。
+     * 加载属性配置文件的值。属性配置文件，可通过系统属性：dubbo.properties.file，如果该值未配置，则默认取dubbo.properties属性配置文件。
+     *
+     * @param config
+     */
     protected static void appendProperties(AbstractConfig config) {
         if (config == null) {
             return;
@@ -142,7 +148,6 @@ public abstract class AbstractConfig implements Serializable {
                                         value = convertLegacyValue(legacyKey, ConfigUtils.getProperty(legacyKey));
                                     }
                                 }
-
                             }
                         }
                     }

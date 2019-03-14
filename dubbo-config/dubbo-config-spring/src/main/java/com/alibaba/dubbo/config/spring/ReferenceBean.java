@@ -40,6 +40,22 @@ import java.util.Map;
 /**
  * ReferenceFactoryBean
  *
+ * ReferenceBean(服务消费者)比较特殊，实现了Spring与Bean生命周期相关的接口。
+ *
+ * InitializingBean，其声明的接口为afterPropertiesSet方法，顾名思义，就是在bean初始化所有属性之后调用。
+ *
+ * DisposableBean：其声明的接口为destroy()方法，在Spring BeanFactory销毁一个单例实例之前调用。
+ *
+ * ApplicationContextAware：其声明的接口为void setApplicationContext(ApplicationContext applicationContext)，
+ *  实现了该接口，Spring容器在初始化Bean时会调用该方法，注入ApplicationContext，已方便该实例可以直接调用applicationContext获取其他Bean。
+ *
+ * FactoryBean：Spring初始化Bean的另外一种方式，例如dubbo:reference，需要返回的对象并不是ReferenceBean,
+ *  而是要返回ref指定的代理类来执行业务操作，故这里使用FactoryBean非常合适。
+ *  FactoryBean定义了如下三个方法：
+ *  1、T getObject() throws Exception：获取需要返回的结果对象。
+ *  2、Class getObjectType()：获取返回对象的类型。
+ *  3、boolean isSingleton()：返回是否是单例。
+ *
  * @export
  */
 public class ReferenceBean<T> extends ReferenceConfig<T> implements FactoryBean, ApplicationContextAware, InitializingBean, DisposableBean {
