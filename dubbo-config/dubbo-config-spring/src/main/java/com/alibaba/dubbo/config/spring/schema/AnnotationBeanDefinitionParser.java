@@ -36,6 +36,9 @@ import static org.springframework.util.StringUtils.trimArrayElements;
 /**
  * {@link AnnotationBean} {@link BeanDefinitionParser}
  *
+ * AnnotationBeanDefinitionParser：注解配置方式的解析入口类，也是基于Spring注解解析逻辑，
+ * 目前暂未深究，如果有兴趣，可以以AnnotationBeanDefinitionParser为入口，进行进一步的分析。
+ *
  * @see ServiceAnnotationBeanPostProcessor
  * @see ReferenceAnnotationBeanPostProcessor
  * @since 2.5.9

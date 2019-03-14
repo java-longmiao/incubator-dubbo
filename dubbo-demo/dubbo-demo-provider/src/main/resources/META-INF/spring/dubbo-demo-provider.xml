@@ -21,19 +21,29 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
        http://dubbo.apache.org/schema/dubbo http://dubbo.apache.org/schema/dubbo/dubbo.xsd">
 
-    <!-- provider's application name, used for tracing dependency relationship -->
-    <dubbo:application name="demo-provider"/>
+    <!-- 提供方应用信息，用于计算依赖关系 -->
+    <dubbo:application name="demo-provider" owner="lmfeng"/>
 
-    <!-- use multicast registry center to export service -->
-    <dubbo:registry address="multicast://224.5.6.7:1234"/>
+    <!-- 使用zookeeper注册中心暴露服务地址 -->
+    <dubbo:registry protocol="zookeeper" address="zookeeper://127.0.0.1:2181"/>
 
-    <!-- use dubbo protocol to export service on port 20880 -->
-    <dubbo:protocol name="dubbo" port="20880"/>
+    <!--dubbox中引入Kryo和FST这两种高效Java序列化实现，来逐步取代原生dubbo中的hessian2,如果使用kryo记得添加依赖 -->
+    <dubbo:protocol name="dubbo" serialization="kryo" port="20880"/>
+
+    <!-- 定义服务提供者默认属性值 -->
+    <dubbo:provider timeout="5000" threadpool="fixed"  threads="100" accepts="1000" token="true"/>
 
     <!-- service implementation, as same as regular local bean -->
     <bean id="demoService" class="com.alibaba.dubbo.demo.provider.DemoServiceImpl"/>
 
-    <!-- declare the service interface to be exported -->
+    <!-- 暴露服务接口 一个服务可以用多个协议暴露，一个服务也可以注册到多个注册中心-->
+    <!--Provider上尽量多配置Consumer端的属性，让Provider实现者一开始就思考Provider服务特点、服务质量的问题-->
     <dubbo:service interface="com.alibaba.dubbo.demo.DemoService" ref="demoService"/>
+
+    <!--
+    上面通过dubbo提供的dubbo:application、dubbo:registry、dubbo:protocol、dubbo:provider、dubbo:service
+    分别定义dubbo应用程序名、注册中心、协议、服务提供者参数默认值、服务提供者，这些配置后面的实现原理是什么呢？是如何启动并发挥相关作用的呢?
+    dubbo自定义标签与命名空间其实现代码在模块dubbo-config中。
+    -->
 
 </beans>

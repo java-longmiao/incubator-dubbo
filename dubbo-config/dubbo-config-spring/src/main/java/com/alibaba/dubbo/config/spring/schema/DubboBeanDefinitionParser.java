@@ -57,6 +57,10 @@ import java.util.regex.Pattern;
 /**
  * AbstractBeanDefinitionParser
  *
+ * BeanDefinitionParser：Spring定义的bean解析器，要实现自定义标签，则需要实现该接口，然后通过NamespaceHandlerSupport将Bean定义解析器注册到Spring bean解析器中。
+ * 从接口中可以看出，其终极目标就是将Element element(xml节点)解析成BeanDefinition，有关于Spring BeanDefinition，
+ * 请参考：https://mp.csdn.net/mdeditor/80490206《Spring系列之基础篇-Spring BeanDefinition初探》
+ *
  * @export
  */
 public class DubboBeanDefinitionParser implements BeanDefinitionParser {
@@ -66,26 +70,72 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
     private final Class<?> beanClass;
     private final boolean required;
 
+    /**
+     * @param beanClass 该xml标签节点最终会被Spring实例化的类名。
+     * @param required 该标签的ID是否必须。
+     */
     public DubboBeanDefinitionParser(Class<?> beanClass, boolean required) {
         this.beanClass = beanClass;
         this.required = required;
     }
 
-    @SuppressWarnings("unchecked")
+//    标签对应的实体对象如下：
+//    dubbo:application
+//    com.alibaba.dubbo.config.ApplicationConfig
+//
+//    dubbo:module
+//    com.alibaba.dubbo.config.ModuleConfig
+//
+//    dubbo:registry
+//    com.alibaba.dubbo.config.RegistryConfig
+//
+//    dubbo:monitor
+//    com.alibaba.dubbo.config.MonitorConfig
+//
+//    dubbo:provider
+//    com.alibaba.dubbo.config.ProviderConfig
+//
+//    dubbo:consumer
+//    com.alibaba.dubbo.config.ConsumerConfig
+//
+//    dubbo:protocol
+//    com.alibaba.dubbo.config.ProtocolConfig
+//
+//    dubbo:service
+//    com.alibaba.dubbo.config.ServiceBean
+//
+//    dubbo:reference
+//    com.alibaba.dubbo.config.ReferenceBean
+//    bean解析器的主要目的就是将上述标签，解析成对应的BeanDifinition，以便Spring构建上述类的实例
+
+    /**
+     *
+     * @param element
+     * @param parserContext
+     * @param beanClass
+     * @param required
+     * @return
+     */
     private static BeanDefinition parse(Element element, ParserContext parserContext, Class<?> beanClass, boolean required) {
         RootBeanDefinition beanDefinition = new RootBeanDefinition();
         beanDefinition.setBeanClass(beanClass);
         beanDefinition.setLazyInit(false);
         String id = element.getAttribute("id");
+        // 解析id属性，如果DubboBeanDefinitionParser对象的required属性为true，如果id为空，则根据如下规则构建一个id
         if ((id == null || id.length() == 0) && required) {
+            // 如果name属性不为空，则取name的值，如果已存在，则为 name + 序号,例如  name,name1,name2
             String generatedBeanName = element.getAttribute("name");
+            // 如果name属性为空
             if (generatedBeanName == null || generatedBeanName.length() == 0) {
+                // 如果是dubbo:protocol标签，则取protocol属性，
                 if (ProtocolConfig.class.equals(beanClass)) {
                     generatedBeanName = "dubbo";
                 } else {
+                    // 其他的则取interface属性，如果不为空，则取该值，但如果已存在，和name处理相同，在后面追加序号
                     generatedBeanName = element.getAttribute("interface");
                 }
             }
+            // 如果还为空，则取beanClass的名称，如果已存在，则追加序号。
             if (generatedBeanName == null || generatedBeanName.length() == 0) {
                 generatedBeanName = beanClass.getName();
             }
@@ -102,6 +152,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
             parserContext.getRegistry().registerBeanDefinition(id, beanDefinition);
             beanDefinition.getPropertyValues().addPropertyValue("id", id);
         }
+        // dubbo:protocol,添加protocol属性(BeanDefinition)。
         if (ProtocolConfig.class.equals(beanClass)) {
             for (String name : parserContext.getRegistry().getBeanDefinitionNames()) {
                 BeanDefinition definition = parserContext.getRegistry().getBeanDefinition(name);
@@ -113,6 +164,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                     }
                 }
             }
+            // dubbo:service,添加ref属性。
         } else if (ServiceBean.class.equals(beanClass)) {
             String className = element.getAttribute("class");
             if (className != null && className.length() > 0) {
@@ -122,8 +174,14 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                 parseProperties(element.getChildNodes(), classDefinition);
                 beanDefinition.getPropertyValues().addPropertyValue("ref", new BeanDefinitionHolder(classDefinition, id + "Impl"));
             }
+            // dubbo:provider，嵌套解析,dubbo:provider标签有两个可选的子标签,dubbo:service、dubbo:parameter,
+            // 这里需要嵌套解析dubbo:service标签知识点，dubbo:provider是配置服务提供者的默认参数，
+            // 在dubbo spring配置文件中可以配置多个dubbo:provider,那dubbo:service标签如何选取一个合适的dubbo:provider作为其默认参数呢？
+            // 有两种办法，其一：将dubbo:service标签直接声明在dubbo:provider方法，
+            // 其二，在dubbo:service中通过provider属性指定一个provider配置，如果不指定，并且存在多个dubbo:provider配置，则会抛出错误。
         } else if (ProviderConfig.class.equals(beanClass)) {
             parseNested(element, parserContext, ServiceBean.class, true, "service", "provider", id, beanDefinition);
+            // dubbo:customer：解析嵌套标签，其原理与dubbo:provider解析一样。
         } else if (ConsumerConfig.class.equals(beanClass)) {
             parseNested(element, parserContext, ReferenceBean.class, false, "reference", "consumer", id, beanDefinition);
         }
@@ -246,7 +304,20 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
         if (parameters != null) {
             beanDefinition.getPropertyValues().addPropertyValue("parameters", parameters);
         }
+        // 解析标签，将属性与值填充到BeanDefinition的propertyValues中。
+        // 最终返回BeanDefinition实例，供Spring实例化Bean
         return beanDefinition;
+
+        // 上述已经完成了Dubbo自定义标签的解析实现，主要完成了ApplicationConfig、RegistryConfig、ServiceBean、ReferenceBean实例的初始化，
+        // 那什么时候构建与注册中心的连接、服务提供者什么时候会向注册中心注册服务，服务消费者向注册中心订阅服务呢？
+
+        // 通过上述步骤，我们已经知道已经成功解析注册中心、服务提供者、服务消费者的配置元信息，并将其实例化，按照我们的思路，配置对象生成后，下一步应该是实现Dubbo服务的注册与发现机制，但代码中无法找到相关代码。
+
+        // 据我目前所掌握的知识，Spring在对象实例化，一般有两种方式来对Bean做一些定制化处理。
+
+        // 1、实现BeanPostProcessor Spring后置处理器，在Bean初始化前后执行相关操作。
+
+        // 2、Bean实现InitializingBean接口(init-method)
     }
 
     private static boolean isPrimitive(Class<?> cls) {
