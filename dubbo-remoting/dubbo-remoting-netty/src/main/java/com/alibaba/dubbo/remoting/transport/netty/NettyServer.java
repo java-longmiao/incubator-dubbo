@@ -61,6 +61,15 @@ public class NettyServer extends AbstractServer implements Server {
         super(url, ChannelHandlers.wrap(handler, ExecutorUtil.setThreadName(url, SERVER_THREAD_POOL_NAME)));
     }
 
+    /**
+     * NettyServer 建立网络连接
+     *
+     * 熟悉本方法需要具备Netty的知识，有关源码：阅读Netty系列文章，这里不对每一行代码进行解读，本方法@1、@2引起了我的注意，
+     * 首先创建NettyServer必须传入一个服务提供者URL，但从DubboProtocol#createServer中可以看出，Server是基于网络套接字（ip:port）缓存的，
+     * 一个JVM应用中，必然会存在多个dubbo:server标签，就会有多个URL，这里为什么可以这样做呢？
+     * 从DubboProtocol#createServer中可以看出，在解析第二个dubbo:service标签时并不会调用createServer,而是会调用Server#reset方法，
+     * 是不是这个方法有什么魔法，在reset方法时能将URL也注册到Server上，那接下来分析NettyServer#reset方法是如何实现的。
+     */
     @Override
     protected void doOpen() throws Throwable {
         NettyHelper.setNettyLoggerFactory();
@@ -69,7 +78,7 @@ public class NettyServer extends AbstractServer implements Server {
         ChannelFactory channelFactory = new NioServerSocketChannelFactory(boss, worker, getUrl().getPositiveParameter(Constants.IO_THREADS_KEY, Constants.DEFAULT_IO_THREADS));
         bootstrap = new ServerBootstrap(channelFactory);
 
-        final NettyHandler nettyHandler = new NettyHandler(getUrl(), this);
+        final NettyHandler nettyHandler = new NettyHandler(getUrl(), this); // @1
         channels = nettyHandler.getChannels();
         // https://issues.jboss.org/browse/NETTY-365
         // https://issues.jboss.org/browse/NETTY-379
@@ -86,7 +95,7 @@ public class NettyServer extends AbstractServer implements Server {
                 }*/
                 pipeline.addLast("decoder", adapter.getDecoder());
                 pipeline.addLast("encoder", adapter.getEncoder());
-                pipeline.addLast("handler", nettyHandler);
+                pipeline.addLast("handler", nettyHandler); // @2
                 return pipeline;
             }
         });

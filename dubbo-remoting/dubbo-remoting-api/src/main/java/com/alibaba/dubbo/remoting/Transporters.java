@@ -53,6 +53,7 @@ public class Transporters {
         } else {
             handler = new ChannelHandlerDispatcher(handlers);
         }
+        // 从这里得知，Dubbo网络传输的接口有Transporter接口实现
         return getTransporter().bind(url, handler);
     }
 
@@ -75,6 +76,10 @@ public class Transporters {
         return getTransporter().connect(url, handler);
     }
 
+    /**
+     * 默认使用 netty 实现
+     * @return
+     */
     public static Transporter getTransporter() {
         return ExtensionLoader.getExtensionLoader(Transporter.class).getAdaptiveExtension();
     }

@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * NettyHandler
  */
-@Sharable
+@Sharable // 该注解实现了线程安全
 public class NettyHandler extends SimpleChannelHandler {
 
     private final Map<String, Channel> channels = new ConcurrentHashMap<String, Channel>(); // <ip:port, channel>

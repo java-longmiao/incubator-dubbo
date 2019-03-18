@@ -210,6 +210,7 @@ public class HeaderExchangeServer implements ExchangeServer {
 
     @Override
     public void reset(URL url) {
+        // NettyServer#reset->父类(AbstractServer)
         server.reset(url);
         try {
             if (url.hasParameter(Constants.HEARTBEAT_KEY)

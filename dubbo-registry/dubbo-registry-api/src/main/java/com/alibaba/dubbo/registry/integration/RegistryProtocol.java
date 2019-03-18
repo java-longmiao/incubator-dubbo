@@ -166,10 +166,11 @@ public class RegistryProtocol implements Protocol {
     }
 
     /**
-     * 可以看出，将调用DubboProtocol#export完成dubbo服务的启动，利用netty构建一个微型服务端，监听端口，
-     * 准备接受服务消费者的网络请求，本节旨在梳理其启动流程，具体实现细节，将在后续章节中详解，这里我们只要知道，
-     * < dubbo:protocol name="dubbo" port="20880" />,会再此次监听该端口，然后将dubbo:service的服务handler加入到命令处理器中，
-     * 当有消息消费者连接该端口时，通过网络解包，将需要调用的服务和参数等信息解析处理后，转交给对应的服务实现类处理即可。
+     * 根据服务暴露协议建立网络通讯服务器，在特定端口建立监听，监听来自消息消费端服务的请求
+     *
+     * @param originInvoker
+     * @param <T>
+     * @return
      */
     private <T> ExporterChangeableWrapper<T> doLocalExport(final Invoker<T> originInvoker) {
         String key = getCacheKey(originInvoker);
@@ -178,7 +179,9 @@ public class RegistryProtocol implements Protocol {
             synchronized (bounds) {
                 exporter = (ExporterChangeableWrapper<T>) bounds.get(key);
                 if (exporter == null) {
+                    // 如果服务提供者以dubbo协议暴露服务，getProviderUrl(originInvoker)返回的URL将以dubbo://开头。
                     final Invoker<?> invokerDelegete = new InvokerDelegete<T>(originInvoker, getProviderUrl(originInvoker));
+                    // 根据Dubbo内置的SPI机制，将调用DubboProtocol#export方法。
                     exporter = new ExporterChangeableWrapper<T>((Exporter<T>) protocol.export(invokerDelegete), originInvoker);
                     bounds.put(key, exporter);
                 }
