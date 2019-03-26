@@ -37,12 +37,14 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
     @Override
     public <T> T getProxy(Invoker<T> invoker, boolean generic) throws RpcException {
         Class<?>[] interfaces = null;
+        // 从消费者URL中获取interfaces的值，用,分隔出单个服务应用接口。
         String config = invoker.getUrl().getParameter("interfaces");
         if (config != null && config.length() > 0) {
             String[] types = Constants.COMMA_SPLIT_PATTERN.split(config);
             if (types != null && types.length > 0) {
                 interfaces = new Class<?>[types.length + 2];
                 interfaces[0] = invoker.getInterface();
+                // 增加默认接口EchoService接口。
                 interfaces[1] = EchoService.class;
                 for (int i = 0; i < types.length; i++) {
                     interfaces[i + 1] = ReflectUtils.forName(types[i]);
@@ -60,7 +62,7 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
             System.arraycopy(temp, 0, interfaces, 0, len);
             interfaces[len] = GenericService.class;
         }
-
+        // 根据需要实现的接口，使用jdk或javassist创建代理类。 默认使用javassist
         return getProxy(invoker, interfaces);
     }
 

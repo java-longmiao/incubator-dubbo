@@ -183,21 +183,27 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
     }
 
     private void init() {
+        // 如果已经初始化，直接返回
         if (initialized) {
             return;
         }
         initialized = true;
+        // 如果interfaceName为空，则抛出异常。
         if (interfaceName == null || interfaceName.length() == 0) {
             throw new IllegalStateException("<dubbo:reference interface=\"\" /> interface not allow null!");
         }
-        // get consumer's global configuration
+        // get consumer's global configuration ReferenceConfig#init调用ReferenceConfig#checkDefault
         checkDefault();
+        // 填充ReferenceBean的属性，属性值来源与上一样，当然只填充ReferenceBean中属性为空的属性
         appendProperties(this);
+
         if (getGeneric() == null && getConsumer() != null) {
             setGeneric(getConsumer().getGeneric());
         }
+        // 如果使用返回引用，将interface值替换为GenericService全路径名，
         if (ProtocolUtils.isGeneric(getGeneric())) {
             interfaceClass = GenericService.class;
+        // 如果不是，则加载interfacename，并检验dubbo:reference子标签dubbo:method引用的方法是否在interface指定的接口中存在。
         } else {
             try {
                 interfaceClass = Class.forName(interfaceName, true, Thread.currentThread()
@@ -207,16 +213,24 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             }
             checkInterfaceAndMethods(interfaceClass, methods);
         }
+
+        // 处理dubbo服务消费端resolve机制，也就是说消息消费者只连服务提供者，绕过注册中心。 //
+
+        // 从系统属性中获取该接口的直连服务提供者，如果存在 -Dinterface=dubbo://127.0.0.1:20880,其中interface为dubbo:reference interface属性的值。
         String resolve = System.getProperty(interfaceName);
         String resolveFile = null;
         if (resolve == null || resolve.length() == 0) {
+            // 如果未指定-D属性，尝试从resolve配置文件中查找，从这里看出-D的优先级更高。
             resolveFile = System.getProperty("dubbo.resolve.file");
+            // 首先尝试获取resolve配置文件的路径，其来源可以通过-Ddubbo.resolve.file=文件路径名来指定，如果未配置该系统参数，
+            // 则默认从${user.home}/dubbo-resolve.properties,如果过文件存在，则设置resolveFile的值，否则resolveFile为null。
             if (resolveFile == null || resolveFile.length() == 0) {
                 File userResolveFile = new File(new File(System.getProperty("user.home")), "dubbo-resolve.properties");
                 if (userResolveFile.exists()) {
                     resolveFile = userResolveFile.getAbsolutePath();
                 }
             }
+            // 如果resolveFile不为空，则加载resolveFile文件中内容，然后通过interface获取其配置的直连服务提供者URL。
             if (resolveFile != null && resolveFile.length() > 0) {
                 Properties properties = new Properties();
                 FileInputStream fis = null;
@@ -235,6 +249,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 resolve = properties.getProperty(interfaceName);
             }
         }
+        // 如果resolve不为空，则填充ReferenceBean的url属性为resolve(点对点服务提供者URL)，打印日志，点对点URL的来源（系统属性、resolve配置文件）。
         if (resolve != null && resolve.length() > 0) {
             url = resolve;
             if (logger.isWarnEnabled()) {
@@ -275,8 +290,11 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 monitor = application.getMonitor();
             }
         }
+        // 校验ReferenceBean的application是否为空,如果为空，new 一个application，并尝试从系统属性（优先）、资源文件中填充其属性；
         checkApplication();
+        // 同时校验stub、mock实现类与interface的兼容性。系统属性、资源文件属性的配置如下：例如 dubbo.application.name
         checkStubAndMock(interfaceClass);
+        // 构建Map,封装服务消费者引用服务提供者URL的属性，这里主要填充side:consume（消费端)、dubbo：2.0.0(版本)、timestamp、pid:进程ID。
         Map<String, String> map = new HashMap<String, String>();
         Map<Object, Object> attributes = new HashMap<Object, Object>();
         map.put(Constants.SIDE_KEY, Constants.CONSUMER_SIDE);
@@ -285,6 +303,8 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         if (ConfigUtils.getPid() > 0) {
             map.put(Constants.PID_KEY, String.valueOf(ConfigUtils.getPid()));
         }
+
+        // 如果不是泛化引用，增加methods:interface的所有方法名，多个用逗号隔开。
         if (!isGeneric()) {
             String revision = Version.getVersion(interfaceClass, version);
             if (revision != null && revision.length() > 0) {
@@ -299,12 +319,16 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 map.put("methods", StringUtils.join(new HashSet<String>(Arrays.asList(methods)), ","));
             }
         }
+        // 用Map存储application配置、module配置、默认消费者参数(ConsumerConfig)、服务消费者dubbo:reference的属性。
         map.put(Constants.INTERFACE_KEY, interfaceName);
         appendParameters(map, application);
         appendParameters(map, module);
         appendParameters(map, consumer, Constants.DEFAULT_KEY);
         appendParameters(map, this);
         String prefix = StringUtils.getServiceKey(map);
+        // 获取服务键值 /{group}/interface:{version}，如果group为空，则为interface:{version},其值存为prifex，
+        // 然后将dubbo:method的属性名称也填入map中，键前缀为dubbo.method.methodname.属性名。
+        // dubbo:method的子标签dubbo:argument标签的属性也追加到attributes map中，键为 prifex + methodname.属性名
         if (methods != null && !methods.isEmpty()) {
             for (MethodConfig method : methods) {
                 appendParameters(map, method, method.getName());
@@ -320,6 +344,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             }
         }
 
+        // 填充register.ip属性，该属性是消息消费者连接注册中心的IP，并不是注册中心自身的IP。
         String hostToRegistry = ConfigUtils.getSystemProperty(Constants.DUBBO_IP_TO_REGISTRY);
         if (hostToRegistry == null || hostToRegistry.length() == 0) {
             hostToRegistry = NetUtils.getLocalHost();
@@ -327,9 +352,9 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             throw new IllegalArgumentException("Specified invalid registry ip from property:" + Constants.DUBBO_IP_TO_REGISTRY + ", value:" + hostToRegistry);
         }
         map.put(Constants.REGISTER_IP_KEY, hostToRegistry);
-
         //attributes are stored by system context.
         StaticContext.getSystemContext().putAll(attributes);
+        // 调用createProxy方法创建消息消费者代理，分析其实现细节
         ref = createProxy(map);
         ConsumerModel consumerModel = new ConsumerModel(getUniqueServiceName(), this, ref, interfaceClass.getMethods());
         ApplicationModel.initConsumerModel(getUniqueServiceName(), consumerModel);
@@ -337,21 +362,26 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 
     @SuppressWarnings({"unchecked", "rawtypes", "deprecation"})
     private T createProxy(Map<String, String> map) {
+        // 判断该消费者是否是引用本(JVM)内提供的服务。
         URL tmpUrl = new URL("temp", "localhost", 0, map);
         final boolean isJvmRefer;
         if (isInjvm() == null) {
+            // 如果该值未配置，则判断ReferenceConfig的url属性是否为空，如果不为空，则isJvmRefer =false，表明该服务消费者将直连该URL的服务提供者；
             if (url != null && url.length() > 0) { // if a url is specified, don't do local reference
                 isJvmRefer = false;
+            // 如果url属性为空，则判断该协议是否是isInjvm，其实现逻辑：获取dubbo:reference的scop属性，根据其值判断
             } else if (InjvmProtocol.getInjvmProtocol().isInjvmRefer(tmpUrl)) {
                 // by default, reference local service if there is
                 isJvmRefer = true;
             } else {
                 isJvmRefer = false;
             }
+            // 如果dubbo:reference标签的injvm(已过期，被local属性替换)如果不为空，则直接取该值，
         } else {
             isJvmRefer = isInjvm().booleanValue();
         }
 
+        // 如果消费者引用本地JVM中的服务，则利用InjvmProtocol创建Invoker，dubbo中的invoker主要负责服务调用的功能，是其核心实现，后续会详细分析，在这里我们需要知道，会创建于协议相关的Invoker即可。
         if (isJvmRefer) {
             URL url = new URL(Constants.LOCAL_PROTOCOL, NetUtils.LOCALHOST, 0, interfaceClass.getName()).addParameters(map);
             invoker = refprotocol.refer(interfaceClass, url);
@@ -360,6 +390,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             }
         } else {
             if (url != null && url.length() > 0) { // user specified URL, could be peer-to-peer address, or register center's address.
+                // 对直连URL进行分割，多个直连URL用分号隔开，如果URL中不包含path属性，则为URL设置path属性为interfaceName。
                 String[] us = Constants.SEMICOLON_SPLIT_PATTERN.split(url);
                 if (us != null && us.length > 0) {
                     for (String u : us) {
@@ -367,21 +398,27 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                         if (url.getPath() == null || url.getPath().length() == 0) {
                             url = url.setPath(interfaceName);
                         }
+                        // 如果直连提供者的协议为registry，则对url增加refer属性，其值为消息消费者所有的属性。(表示从注册中心发现服务提供者)
                         if (Constants.REGISTRY_PROTOCOL.equals(url.getProtocol())) {
                             urls.add(url.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
                         } else {
+                            // 如果是其他协议提供者，则合并服务提供者与消息消费者的属性，并移除服务提供者默认属性。以default开头的属性。
                             urls.add(ClusterUtils.mergeUrl(url, map));
                         }
                     }
                 }
-            } else { // assemble URL from register center's configuration
+            } else { // assemble URL from register center's configuration 普通消息消费者，从注册中心订阅服务。
+                // 获取所有注册中心URL，其中参数false表示消费端，需要排除dubbo:registry subscribe=false的注册中心，其值为false表示不接受订阅。
                 List<URL> us = loadRegistries(false);
                 if (us != null && !us.isEmpty()) {
                     for (URL u : us) {
+                        // 根据注册中心URL，构建监控中心URL。
                         URL monitorUrl = loadMonitor(u);
                         if (monitorUrl != null) {
+                            // 如果监控中心不为空，在注册中心URL后增加属性monitor。
                             map.put(Constants.MONITOR_KEY, URL.encode(monitorUrl.toFullString()));
                         }
+                        // 在注册中心URL中，追加属性refer，其值为消费端的所有配置组成的URL。
                         urls.add(u.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
                     }
                 }
@@ -389,10 +426,17 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                     throw new IllegalStateException("No such any registry to reference " + interfaceName + " on the consumer " + NetUtils.getLocalHost() + " use dubbo version " + Version.getVersion() + ", please config <dubbo:registry address=\"...\" /> to your spring config.");
                 }
             }
-
+            // 根据URL获取对应协议的Invoker。
             if (urls.size() == 1) {
+                // 如果只有一个服务提供者URL,则直接根据协议构建Invoker，具体有如下协议：injvm、dubbo、memcached、redis、thrift
                 invoker = refprotocol.refer(interfaceClass, urls.get(0));
+            // 如果有多个服务提供者，则众多服务提供者构成一个集群。
+                // 首先根据协议构建服务Invoker，默认Dubbo基于服务注册于发现，在服务消费端不会指定url属性，从注册中心获取服务提供者列表，
+                // 此时的URL：registry://开头，url中会包含register属性，其值为注册中心的类型，例如zookeeper，将使用DubboProtocol构建Invoker，
+                // 该方法将自动发现注册在注册中心的服务提供者，后续将会zookeeper注册中心为例，详细分析其实现原理。
             } else {
+                // 集群模式的Invoker和单个协议Invoker一样实现Invoker接口，然后在集群Invoker中利用Directory保证一个一个协议的调用器，
+                // 十分的巧妙，在后续章节中将重点分析Dubbo Invoker实现原理，包含集群实现机制。
                 List<Invoker<?>> invokers = new ArrayList<Invoker<?>>();
                 URL registryURL = null;
                 for (URL url : urls) {
@@ -411,6 +455,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             }
         }
 
+        // 如果dubbo:referecnce的check=true或默认为空，则需要判断服务提供者是否存在。
         Boolean c = check;
         if (c == null && consumer != null) {
             c = consumer.isCheck();
@@ -424,10 +469,15 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         if (logger.isInfoEnabled()) {
             logger.info("Refer dubbo service " + interfaceClass.getName() + " from url " + invoker.getUrl());
         }
-        // create service proxy
+        // create service proxy AbstractProxyFactory#getProxy 根据invoker 获取代理
         return (T) proxyFactory.getProxy(invoker);
     }
 
+    /**
+     * 如果dubbo:reference标签也就是ReferenceBean的consumer属性为空，调用appendProperties方法，填充默认属性，其具体加载顺序：
+     * 1、从系统属性加载对应参数值，参数键：dubbo.consumer.属性名，从系统属性中获取属性值的方法为：System.getProperty(key)。
+     * 2、加载属性配置文件的值。属性配置文件，可通过系统属性：dubbo.properties.file，如果该值未配置，则默认取dubbo.properties属性配置文件。
+     */
     private void checkDefault() {
         if (consumer == null) {
             consumer = new ConsumerConfig();

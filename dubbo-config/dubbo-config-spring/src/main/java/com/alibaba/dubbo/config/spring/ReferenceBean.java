@@ -97,6 +97,8 @@ public class ReferenceBean<T> extends ReferenceConfig<T> implements FactoryBean,
     @Override
     @SuppressWarnings({"unchecked"})
     public void afterPropertiesSet() throws Exception {
+        // 如果consumer为空，说明dubbo:reference标签未设置consumer属性，如果一个dubbo:consumer标签，则取该实例，如果存在多个dubbo:consumer 配置，
+        // 则consumer必须设置，否则会抛出异常："Duplicate consumer configs"
         if (getConsumer() == null) {
             Map<String, ConsumerConfig> consumerConfigMap = applicationContext == null ? null : BeanFactoryUtils.beansOfTypeIncludingAncestors(applicationContext, ConsumerConfig.class, false, false);
             if (consumerConfigMap != null && consumerConfigMap.size() > 0) {
@@ -114,6 +116,7 @@ public class ReferenceBean<T> extends ReferenceConfig<T> implements FactoryBean,
                 }
             }
         }
+        // 如果application为空,则尝试从BeanFactory中查询dubbo:application实例，如果存在多个dubbo:application配置，则抛出异常："Duplicate application configs"。
         if (getApplication() == null
                 && (getConsumer() == null || getConsumer().getApplication() == null)) {
             Map<String, ApplicationConfig> applicationConfigMap = applicationContext == null ? null : BeanFactoryUtils.beansOfTypeIncludingAncestors(applicationContext, ApplicationConfig.class, false, false);
@@ -132,6 +135,7 @@ public class ReferenceBean<T> extends ReferenceConfig<T> implements FactoryBean,
                 }
             }
         }
+        // 如果ServiceBean的module为空，则尝试从BeanFactory中查询dubbo:module实例，如果存在多个dubbo:module，则抛出异常："Duplicate module configs: "。
         if (getModule() == null
                 && (getConsumer() == null || getConsumer().getModule() == null)) {
             Map<String, ModuleConfig> moduleConfigMap = applicationContext == null ? null : BeanFactoryUtils.beansOfTypeIncludingAncestors(applicationContext, ModuleConfig.class, false, false);
@@ -150,6 +154,7 @@ public class ReferenceBean<T> extends ReferenceConfig<T> implements FactoryBean,
                 }
             }
         }
+        // 尝试从BeanFactory中加载所有的注册中心，注意ServiceBean的List< RegistryConfig> registries属性，为注册中心集合
         if ((getRegistries() == null || getRegistries().isEmpty())
                 && (getConsumer() == null || getConsumer().getRegistries() == null || getConsumer().getRegistries().isEmpty())
                 && (getApplication() == null || getApplication().getRegistries() == null || getApplication().getRegistries().isEmpty())) {
@@ -166,6 +171,7 @@ public class ReferenceBean<T> extends ReferenceConfig<T> implements FactoryBean,
                 }
             }
         }
+        // 尝试从BeanFacotry中加载一个监控中心，填充ServiceBean的MonitorConfig monitor属性，如果存在多个dubbo:monitor配置，则抛出"Duplicate monitor configs: "。
         if (getMonitor() == null
                 && (getConsumer() == null || getConsumer().getMonitor() == null)
                 && (getApplication() == null || getApplication().getMonitor() == null)) {
@@ -185,11 +191,15 @@ public class ReferenceBean<T> extends ReferenceConfig<T> implements FactoryBean,
                 }
             }
         }
+        // 判断是否初始化，如果为初始化，则调用getObject()方法
         Boolean b = isInit();
         if (b == null && getConsumer() != null) {
             b = getConsumer().isInit();
         }
         if (b != null && b.booleanValue()) {
+            // 该方法也是FactoryBean定义的方法，ReferenceBean是dubbo:reference所真实引用的类(interface)的实例工程，
+            // getObject方法返回的是interface的实例，而不是ReferenceBean实例。
+            // ReferenceBean#getObject()方法直接调用其父类的get方法,get方法内部调用init()方法进行初始化
             getObject();
         }
     }
