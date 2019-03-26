@@ -32,6 +32,9 @@ import java.util.List;
  * <a href="http://en.wikipedia.org/wiki/Load_balancing_(computing)">Load-Balancing</a>
  *
  * @see com.alibaba.dubbo.rpc.cluster.Cluster#join(Directory)
+ *
+ * 集群负载算法
+ * 当一个服务有多个服务提供者时，消费端在进行服务调用时选择服务服务提供者的负载均衡算法。默认随机
  */
 @SPI(RandomLoadBalance.NAME)
 public interface LoadBalance {

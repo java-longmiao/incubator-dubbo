@@ -25,8 +25,9 @@ import com.alibaba.dubbo.rpc.cluster.Router;
 import java.util.List;
 
 /**
- * StaticDirectory
+ * StaticDirectory：静态目录服务
  *
+ * 所谓静态目录服务就是在创建StaticDirectory时指定一个服务提供者集合，则该目录服务实例在其生命周期中，只会返回这些服务提供者。
  */
 public class StaticDirectory<T> extends AbstractDirectory<T> {
 

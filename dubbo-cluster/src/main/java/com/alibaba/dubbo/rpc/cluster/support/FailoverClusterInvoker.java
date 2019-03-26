@@ -40,6 +40,8 @@ import java.util.Set;
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Failover">Failover</a>
  *
+ * 通过< dubbo:service cluster = "failover" /> 或 < dubbo:reference cluster="failover" />
+ * 集群策略：服务调用后，如果出现失败，则重试其他服务提供者，默认重试2次，总共执行3次，重试次数由retries配置，dubbo集群默认方式。
  */
 public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
 

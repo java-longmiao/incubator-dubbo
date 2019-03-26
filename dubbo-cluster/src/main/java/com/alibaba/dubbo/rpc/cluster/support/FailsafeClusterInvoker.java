@@ -34,6 +34,8 @@ import java.util.List;
  *
  * <a href="http://en.wikipedia.org/wiki/Fail-safe">Fail-safe</a>
  *
+ * 通过< dubbo:service cluster = "failsafe" /> 或 < dubbo:reference cluster="failsafe" />
+ * 集群策略：服务调用后，只打印错误日志，然后直接返回。
  */
 public class FailsafeClusterInvoker<T> extends AbstractClusterInvoker<T> {
     private static final Logger logger = LoggerFactory.getLogger(FailsafeClusterInvoker.class);

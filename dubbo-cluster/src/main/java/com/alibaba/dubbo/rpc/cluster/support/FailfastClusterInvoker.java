@@ -33,6 +33,9 @@ import java.util.List;
  *
  * <a href="http://en.wikipedia.org/wiki/Fail-fast">Fail-fast</a>
  *
+ * 通过< dubbo:service cluster = "failfast" /> 或 < dubbo:reference cluster="failfast" />
+ * 集群策略：服务调用后，快速失败，直接抛出异常，并不重试，也不受retries参数的制约，适合新增、修改类操作。
+ *
  */
 public class FailfastClusterInvoker<T> extends AbstractClusterInvoker<T> {
 

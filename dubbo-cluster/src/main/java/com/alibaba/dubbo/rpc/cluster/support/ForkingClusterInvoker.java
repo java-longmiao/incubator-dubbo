@@ -40,6 +40,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <a href="http://en.wikipedia.org/wiki/Fork_(topology)">Fork</a>
  *
+ * 通过< dubbo:service cluster = "forking" /> 或 < dubbo:reference cluster="forking" />
+ * 集群策略：并发调用多个服务提供者，取第一个返回的结果。可以通过forks设置并发调用的服务提供者个数。
  */
 public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T> {
 

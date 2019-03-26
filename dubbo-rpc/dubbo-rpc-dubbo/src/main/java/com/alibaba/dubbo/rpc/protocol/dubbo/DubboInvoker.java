@@ -38,7 +38,7 @@ import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * DubboInvoker
+ * DubboInvoker dubbo协议调用器具体实现。
  */
 public class DubboInvoker<T> extends AbstractInvoker<T> {
 

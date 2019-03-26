@@ -28,6 +28,9 @@ import java.util.List;
 /**
  * AvailableCluster
  *
+ * 通过< dubbo:service cluster = "available" /> 或 < dubbo:reference cluster="available" />
+ * 集群策略：总是选择第一个可用的服务提供者。
+ *
  */
 public class AvailableClusterInvoker<T> extends AbstractClusterInvoker<T> {
 

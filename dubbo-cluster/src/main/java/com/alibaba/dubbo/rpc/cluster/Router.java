@@ -30,18 +30,21 @@ import java.util.List;
  *
  * @see com.alibaba.dubbo.rpc.cluster.Cluster#join(Directory)
  * @see com.alibaba.dubbo.rpc.cluster.Directory#list(Invocation)
+ *
+ * 路由功能
+ * 根据消息消费者URL，结合路由表达式或JS引擎，从Directory中选择符合路由规则的Invoker，再执行负载均衡算法。
  */
 public interface Router extends Comparable<Router> {
 
     /**
-     * get the router url.
+     * get the router url. 获取消费者url
      *
      * @return url
      */
     URL getUrl();
 
     /**
-     * route.
+     * route. 根据消息消费者URL，和上下文invocation，从invokers中筛选合适的Invokers。
      *
      * @param invokers
      * @param url        refer url

@@ -17,26 +17,26 @@
 package com.alibaba.dubbo.common;
 
 /**
- * Node. (API/SPI, Prototype, ThreadSafe)
+ * Node. (API/SPI, Prototype, ThreadSafe) Invoer的抽象接口
  */
 public interface Node {
 
     /**
-     * get url.
+     * get url. 在dubbo中，注册中心、服务提供者、服务消费者、监控中心等都使用URL描述。
      *
      * @return url.
      */
     URL getUrl();
 
     /**
-     * is available.
+     * is available. 判断是否可用
      *
      * @return available.
      */
     boolean isAvailable();
 
     /**
-     * destroy.
+     * destroy. 资源销毁
      */
     void destroy();
 

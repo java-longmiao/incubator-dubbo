@@ -24,7 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * MockInvocation.java
+ * MockInvocation.java 用于mock 单元测试
  */
 public class MockInvocation implements Invocation {
 

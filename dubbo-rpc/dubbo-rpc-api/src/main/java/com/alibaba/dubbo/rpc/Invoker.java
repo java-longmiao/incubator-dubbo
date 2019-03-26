@@ -19,7 +19,7 @@ package com.alibaba.dubbo.rpc;
 import com.alibaba.dubbo.common.Node;
 
 /**
- * Invoker. (API/SPI, Prototype, ThreadSafe)
+ * Invoker. (API/SPI, Prototype, ThreadSafe) 服务调用器，Dubbo 调用服务的抽象
  *
  * @see com.alibaba.dubbo.rpc.Protocol#refer(Class, com.alibaba.dubbo.common.URL)
  * @see com.alibaba.dubbo.rpc.InvokerListener
@@ -28,14 +28,14 @@ import com.alibaba.dubbo.common.Node;
 public interface Invoker<T> extends Node {
 
     /**
-     * get service interface.
+     * get service interface. 获取服务提供者接口
      *
      * @return service interface.
      */
     Class<T> getInterface();
 
     /**
-     * invoke.
+     * invoke. 调用服务，返回结果
      *
      * @param invocation
      * @return result

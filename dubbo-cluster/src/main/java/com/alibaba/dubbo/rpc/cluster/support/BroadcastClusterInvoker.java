@@ -31,6 +31,9 @@ import java.util.List;
 /**
  * BroadcastClusterInvoker
  *
+ * 通过< dubbo:service cluster = "broadcast" /> 或 < dubbo:reference cluster="broadcast" />
+ * 集群策略：广播模式，向所有服务提供者都发送请求，任何一个调用失败，则认为失败。
+ *
  */
 public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
 

@@ -27,6 +27,8 @@ import java.util.Random;
 /**
  * LeastActiveLoadBalance
  *
+ * 可以通过< dubbo:service loadbalance="leastactive" />或< dubbo:provider loadbalance = "leastactive" />
+ * 负载均衡算法：最小活跃调用。
  */
 public class LeastActiveLoadBalance extends AbstractLoadBalance {
 

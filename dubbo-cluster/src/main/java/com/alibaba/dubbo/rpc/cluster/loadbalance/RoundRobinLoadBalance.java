@@ -33,7 +33,10 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Round robin load balance.
  * 
- * Smoothly round robin's implementation @since 2.6.5 
+ * Smoothly round robin's implementation @since 2.6.5
+ *
+ * 可以通过< dubbo:service loadbalance="roundrobin" />或< dubbo:provider loadbalance = "roundrobin" />
+ * 负载均衡算法：加权轮询算法。
  */
 public class RoundRobinLoadBalance extends AbstractLoadBalance {
     public static final String NAME = "roundrobin";

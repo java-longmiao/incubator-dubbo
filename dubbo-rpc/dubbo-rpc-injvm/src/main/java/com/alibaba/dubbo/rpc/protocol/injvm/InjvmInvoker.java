@@ -28,7 +28,7 @@ import com.alibaba.dubbo.rpc.protocol.AbstractInvoker;
 import java.util.Map;
 
 /**
- * InjvmInvoker
+ * InjvmInvoker injvm协议调用其具体实现（本地协议）
  */
 class InjvmInvoker<T> extends AbstractInvoker<T> {
 

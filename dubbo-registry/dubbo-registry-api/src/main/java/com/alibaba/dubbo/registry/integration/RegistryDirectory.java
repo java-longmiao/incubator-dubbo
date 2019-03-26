@@ -54,8 +54,11 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * RegistryDirectory
+ * RegistryDirectory：动态目录服务（基于注册中心）
  *
+ * 从注册中心动态获取发现服务提供者，默认消费者并不会指定特定的服务提供者URL，
+ * 所以会向注册中心订阅服务的服务提供者（监听注册中心providers目录），
+ * 利用RegistryDirectory自动获取注册中心服务器列表。
  */
 public class RegistryDirectory<T> extends AbstractDirectory<T> implements NotifyListener {
 

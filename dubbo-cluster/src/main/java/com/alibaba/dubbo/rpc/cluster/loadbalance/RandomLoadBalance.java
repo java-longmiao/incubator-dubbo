@@ -26,6 +26,8 @@ import java.util.Random;
 /**
  * random load balance.
  *
+ * 可以通过< dubbo:service loadbalance="random" />或< dubbo:service loadbalance = "random" />
+ * 负载均衡算法：随机，如果weight（权重越大，机会越高），默认使用
  */
 public class RandomLoadBalance extends AbstractLoadBalance {
 

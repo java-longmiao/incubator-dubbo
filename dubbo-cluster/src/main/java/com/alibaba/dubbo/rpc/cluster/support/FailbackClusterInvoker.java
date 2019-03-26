@@ -44,6 +44,9 @@ import java.util.concurrent.TimeUnit;
  *
  * <a href="http://en.wikipedia.org/wiki/Failback">Failback</a>
  *
+ * 通过< dubbo:service cluster = "failback" /> 或 < dubbo:reference cluster="failback" />
+ * 集群策略：服务调用失败后，定时重试，重试次数无线次，重试频率：5s。并不会切换服务提供者。
+ *
  */
 public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
 

@@ -29,6 +29,9 @@ import java.util.List;
  * <a href="http://en.wikipedia.org/wiki/Directory_service">Directory Service</a>
  *
  * @see com.alibaba.dubbo.rpc.cluster.Cluster#join(Directory)
+ *
+ * 目录服务，Invoker的目录服务
+ * 该接口主要的作用是服务提供者的目录服务，管理多个服务提供者。
  */
 public interface Directory<T> extends Node {
 
@@ -40,7 +43,7 @@ public interface Directory<T> extends Node {
     Class<T> getInterface();
 
     /**
-     * list invokers.
+     * list invokers. 根据调用上下文获取当前所有该服务的服务提供者。
      *
      * @return invokers
      */
