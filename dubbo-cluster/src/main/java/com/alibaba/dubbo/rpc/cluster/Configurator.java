@@ -19,6 +19,8 @@ package com.alibaba.dubbo.rpc.cluster;
 import com.alibaba.dubbo.common.URL;
 
 /**
+ * 协议配置接口
+ *
  * Configurator. (SPI, Prototype, ThreadSafe)
  *
  */
@@ -26,6 +28,7 @@ public interface Configurator extends Comparable<Configurator> {
 
     /**
      * get the configurator url.
+     * 获取配置url
      *
      * @return configurator url.
      */
@@ -33,7 +36,7 @@ public interface Configurator extends Comparable<Configurator> {
 
     /**
      * Configure the provider url.
-     * O
+     * 根据configureUrl来配置 URL url
      *
      * @param url - old rovider url.
      * @return new provider url.

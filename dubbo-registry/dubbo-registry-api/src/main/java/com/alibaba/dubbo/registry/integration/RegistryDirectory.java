@@ -224,6 +224,12 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
     /**
      * 该方法是在注册中心providers、configurators、routers目录下的节点发生变化后，通知RegistryDirectory，已便更新最新信息，实现”动态“发现机制。
      *
+     * 当Dubbo管理人员在dubboAdmin，选择配置后点击保存，会构建override:// url存入到注册中心(configurators) catalog下，
+     * 此时基于注册中心发现服务提供者的监听器(RegistryDirectory)会收到回调(notify)方法，接下来我们再来看一下RegistryDirectory#notify方法。
+     *
+     * 当在dubbo-admin(管理后台)中创建一条override规则后，会首先存储在注册中心（zookeeper的指定目录下${service}/configurators目录下，
+     * 此时基于注册中心的事件机制，会通知相关监听者（服务消费者），服务消费者收到最新的配置时，会根据最新的配置重新构建Invoker对象，然后销毁原先的Invoker对象。
+     *
      * @param urls The list of registered information , is always not empty. The meaning is the same as the return value of {@link com.alibaba.dubbo.registry.RegistryService#lookup(URL)}.
      */
     @Override
