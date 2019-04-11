@@ -262,10 +262,10 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             this.configurators = toConfigurators(configuratorUrls);
         }
         // routers 将routerUrls路由URL转换为Router对象
-        if (routerUrls != null && !routerUrls.isEmpty()) {
-            List<Router> routers = toRouters(routerUrls);
+        if (routerUrls != null && !routerUrls.isEmpty()) { // 如果routerUrls 不为空，说明注册中心的catalog=routers目录下新增或删除了某些路由规则，最后存在路由规则。
+            List<Router> routers = toRouters(routerUrls); // 将路由规则URL转换为路由实现类Router接口的实现类，例如条件路由规则、脚本路由规则具体实现类。
             if (routers != null) { // null - do nothing
-                setRouters(routers);
+                setRouters(routers); // 将现存的路由规则实现类覆盖RegistroyDirectory#routers属性，在下一次服务调用时，这些路由规则将生效。
             }
         }
         List<Configurator> localConfigurators = this.configurators; // local reference
@@ -366,6 +366,9 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
     }
 
     /**
+     * 方法实现比较简单，就是基于协议头condition://或script://构建具体的路由规则实现类。
+     * 从上面两个方法可以看出，当主从中心的路由配置发生变化后，会重新构建RegistryDirectory的List< Router> routers属性，那这个属性在什么时候用呢？
+     *
      * @param urls
      * @return null : no routers ,do nothing
      * else :routers list

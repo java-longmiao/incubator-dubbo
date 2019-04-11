@@ -67,6 +67,14 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
         setRouters(routers);
     }
 
+    /**
+     * 在通过RegistryDirector时，获取List< Invoker>时，会对所有的Invoker列表进行路由过滤，然后返回符合路由规则的Invoker，
+     * 本文就不详细分析Dubbo是如何根据配置的条件路由规则、脚本路由规则去过滤，其实现细节，如有兴趣，可关注：ConditionRouter、ScriptRouter。
+     *
+     * @param invocation
+     * @return
+     * @throws RpcException
+     */
     @Override
     public List<Invoker<T>> list(Invocation invocation) throws RpcException {
         if (destroyed) {
