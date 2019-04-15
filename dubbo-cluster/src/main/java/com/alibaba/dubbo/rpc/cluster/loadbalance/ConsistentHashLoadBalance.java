@@ -46,6 +46,7 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
     protected <T> Invoker<T> doSelect(List<Invoker<T>> invokers, URL url, Invocation invocation) {
         String methodName = RpcUtils.getMethodName(invocation);
         String key = invokers.get(0).getUrl().getServiceKey() + "." + methodName;
+        // 根据所有的调用者生成一个HashCode，用该HashCode值来判断服务提供者是否发生了变化。
         int identityHashCode = System.identityHashCode(invokers);
         ConsistentHashSelector<T> selector = (ConsistentHashSelector<T>) selectors.get(key);
         if (selector == null || selector.identityHashCode != identityHashCode) {
@@ -69,12 +70,20 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
             this.virtualInvokers = new TreeMap<Long, Invoker<T>>();
             this.identityHashCode = identityHashCode;
             URL url = invokers.get(0).getUrl();
+            // 获取服务提供者< dubbo:method/>标签的hash.nodes属性，如果为空，默认为160，表示一致性hash算法中虚拟节点数量。其配置方式如下：
+//                < dubbo:method ... >
+//                    < dubbo:parameter key="hash.nodes" value="160" />
+//                    < dubbo:parameter key="hash.arguments" value="0,1" />
+//                < /dubbo:method/>
             this.replicaNumber = url.getMethodParameter(methodName, "hash.nodes", 160);
+            // 一致性Hash算法，在dubbo中，相同的服务调用参数走固定的节点，hash.arguments表示哪些参数参与hashcode，默认值“0”，表示第一个参数。
             String[] index = Constants.COMMA_SPLIT_PATTERN.split(url.getMethodParameter(methodName, "hash.arguments", "0"));
             argumentIndex = new int[index.length];
             for (int i = 0; i < index.length; i++) {
                 argumentIndex[i] = Integer.parseInt(index[i]);
             }
+            // 为每一个Invoker创建replicaNumber 个虚拟节点，每一个节点的Hashcode不同。同一个Invoker不同hashcode的创建逻辑为：
+            // invoker.getUrl().toFullString() + i (0-39)的值，对其md5,然后用该值+h(0-3)的值取hash。一致性hash实现的一个关键是如果将一个Invoker创建的replicaNumber个虚拟节点(hashcode)能够均匀分布在Hash环上
             for (Invoker<T> invoker : invokers) {
                 String address = invoker.getUrl().getAddress();
                 for (int i = 0; i < replicaNumber / 4; i++) {
@@ -88,8 +97,11 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
         }
 
         public Invoker<T> select(Invocation invocation) {
+            // 根据调用参数，并根据hash.arguments配置值，获取指定的位置的参数值，追加一起返回。
             String key = toKey(invocation.getArguments());
+            // 对Key进行md5签名。
             byte[] digest = md5(key);
+            // 根据key进行选择调用者。
             return selectForKey(hash(digest, 0));
         }
 
@@ -103,14 +115,39 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
             return buf.toString();
         }
 
+        /**
+         * 这里实现，应该可以不使用tailMap，更改后如下：如果想要了解TreeMap关于这一块的特性(tailMap、ceillingEntry、headMap)等API的详细解释，
+         * 可以查看这篇博文：https://blog.csdn.net/prestigeding/article/details/80821576
+         *
+         * @param hash
+         * @return
+         */
         private Invoker<T> selectForKey(long hash) {
+            // 对虚拟节点，从virtualInvokers中选取一个子集，subMap(hash,ture,lastKey,true),其实就是实现根据待查找hashcode(key)顺时针，选中大于等于指定key的第一个key。
             Map.Entry<Long, Invoker<T>> entry = virtualInvokers.tailMap(hash, true).firstEntry();
+            // 如果未找到，则返回virtualInvokers第一个key。
             if (entry == null) {
                 entry = virtualInvokers.firstEntry();
             }
+            // 根据key返回指定的Invoker即可。
             return entry.getValue();
         }
 
+//        private Invoker<T> selectForKey(long hash) {
+//            Map.Entry<Long, Invoker<T>> entry = virtualInvokers.ceilingEntry(hash);
+//            if(entry == null ) {
+//                entry = virtualInvokers.firstEntry();
+//            }
+//            return entry.getValue();
+//        }
+
+        /**
+         * Dubbo给出的hash 实现如下，由于能力有限，目前并未真正理解如下方法的实现依据：
+         *
+         * @param digest
+         * @param number
+         * @return
+         */
         private long hash(byte[] digest, int number) {
             return (((long) (digest[3 + number * 4] & 0xFF) << 24)
                     | ((long) (digest[2 + number * 4] & 0xFF) << 16)

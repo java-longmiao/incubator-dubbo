@@ -36,6 +36,16 @@ public class LeastActiveLoadBalance extends AbstractLoadBalance {
 
     private final Random random = new Random();
 
+    /**
+     * 最小活跃连接数，其核心实现就是，首先找到服务提供者当前最小的活跃连接数，如果一个服务提供者的服务连接数比其他的都要小，
+     * 则选择这个活跃连接数最小的服务提供者发起调用，如果存在多个服务提供者的活跃连接数，并且是最小的，则在这些服务提供者之间选择加权随机算法选择一个服务提供者。
+     *
+     * @param invokers
+     * @param url
+     * @param invocation
+     * @param <T>
+     * @return
+     */
     @Override
     protected <T> Invoker<T> doSelect(List<Invoker<T>> invokers, URL url, Invocation invocation) {
         int length = invokers.size(); // Number of invokers

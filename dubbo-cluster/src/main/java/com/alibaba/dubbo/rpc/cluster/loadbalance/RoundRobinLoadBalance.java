@@ -68,6 +68,8 @@ public class RoundRobinLoadBalance extends AbstractLoadBalance {
         }
     }
 
+    // 加权轮询算法的核心算法是按权重轮询，一个基本点是应该是一个当前序号与服务提供者数量取模，需要结合权重。Dubbo使用如下数据结构存储当前序号：
+    // 键值：serviceKey(<dubbo:service interface=""/>+ methodname)，每个方法采用不同的计数器。
     private ConcurrentMap<String, ConcurrentMap<String, WeightedRoundRobin>> methodWeightMap = new ConcurrentHashMap<String, ConcurrentMap<String, WeightedRoundRobin>>();
     private AtomicBoolean updateLock = new AtomicBoolean();
     
@@ -91,6 +93,7 @@ public class RoundRobinLoadBalance extends AbstractLoadBalance {
     
     @Override
     protected <T> Invoker<T> doSelect(List<Invoker<T>> invokers, URL url, Invocation invocation) {
+        // 构建ConcurrentMap< String, AtomicPositiveInteger> sequences中的key,以interface+methodname为键，里面存储的是当前序号（轮询）。
         String key = invokers.get(0).getUrl().getServiceKey() + "." + invocation.getMethodName();
         ConcurrentMap<String, WeightedRoundRobin> map = methodWeightMap.get(key);
         if (map == null) {
@@ -102,7 +105,7 @@ public class RoundRobinLoadBalance extends AbstractLoadBalance {
         long now = System.currentTimeMillis();
         Invoker<T> selectedInvoker = null;
         WeightedRoundRobin selectedWRR = null;
-        for (Invoker<T> invoker : invokers) {
+        // 通过遍历所有Invoker，构建每个Invoker的权重，与此同时算出总权重
             String identifyString = invoker.getUrl().toIdentityString();
             WeightedRoundRobin weightedRoundRobin = map.get(identifyString);
             int weight = getWeight(invoker, invocation);
