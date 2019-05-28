@@ -33,7 +33,7 @@ import java.util.List;
  *
  * 通过< dubbo:service cluster = "broadcast" /> 或 < dubbo:reference cluster="broadcast" />
  * 集群策略：广播模式，向所有服务提供者都发送请求，任何一个调用失败，则认为失败。
- *
+ * 场景：缓存刷新
  */
 public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
@@ -46,10 +46,13 @@ public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Result doInvoke(final Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
+        // 检测服务提供者列表，如果为空，则抛出没有服务提供的异常。
         checkInvokers(invokers, invocation);
         RpcContext.getContext().setInvokers((List) invokers);
         RpcException exception = null;
         Result result = null;
+        // 遍历服务提供者列表，依次调用服务提供者的invoker,每个服务调用用try catch语句包裹，当服务调用发生异常时，记录异常信息，
+        // 但并不立即返回，广播模式，每个服务提供者调用是异步还是同步，取决服务调用的配置，默认是同步调用。
         for (Invoker<T> invoker : invokers) {
             try {
                 result = invoker.invoke(invocation);
@@ -61,6 +64,7 @@ public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
                 logger.warn(e.getMessage(), e);
             }
         }
+        // 只要其中一个服务调用发送一次，将抛出异常信息，异常信息被封装为RpcException。
         if (exception != null) {
             throw exception;
         }

@@ -115,6 +115,8 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             return null;
         String methodName = invocation == null ? "" : invocation.getMethodName();
 
+        // sticky机制（粘性），如果开启了粘性机制的话。通过< dubbo:method sticky="true"/>,默认不开启。
+        // 如果开启，上一次该服务调用的是哪个服务提供者，只要调用过程中不发生错误，后续都会选择该服务提供者进行调用。
         boolean sticky = invokers.get(0).getUrl().getMethodParameter(methodName, Constants.CLUSTER_STICKY_KEY, Constants.DEFAULT_CLUSTER_STICKY);
         {
             //ignore overloaded method
@@ -128,6 +130,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
                 }
             }
         }
+        // 调用doSelect()
         Invoker<T> invoker = doSelect(loadbalance, invocation, invokers, selected);
 
         if (sticky) {
@@ -139,14 +142,18 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
     private Invoker<T> doSelect(LoadBalance loadbalance, Invocation invocation, List<Invoker<T>> invokers, List<Invoker<T>> selected) throws RpcException {
         if (invokers == null || invokers.isEmpty())
             return null;
+        // 如果可选Invoker只有一个的话，直接返回该Invoker。
         if (invokers.size() == 1)
             return invokers.get(0);
+        // 如果负载策略为空，则根据SPI，加载默认负载策略random
         if (loadbalance == null) {
             loadbalance = ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(Constants.DEFAULT_LOADBALANCE);
         }
+        // 调用负载策略选择一个invoker
         Invoker<T> invoker = loadbalance.select(invokers, getUrl(), invocation);
 
         //If the `invoker` is in the  `selected` or invoker is unavailable && availablecheck is true, reselect.
+        // 如果选择的Invoker已被选择，则重新选择，这里有一个疑问，为什么不在选之前，先过滤掉已被选的Invoker？
         if ((selected != null && selected.contains(invoker))
                 || (!invoker.isAvailable() && getUrl() != null && availablecheck)) {
             try {
@@ -237,12 +244,15 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             ((RpcInvocation) invocation).addAttachments(contextAttachments);
         }
 
+        // 根据调用上下文，获取服务提供者列表，服务提供者从Directory中获取。
         List<Invoker<T>> invokers = list(invocation);
+        // 根据SPI机制，获取负载均衡算法的实现类,根据< dubbo:consumer loadbalance=""/>、< dubbo:reference loadbalance=""/>等标签的配置值，默认为random，加权随机算法。
         if (invokers != null && !invokers.isEmpty()) {
             loadbalance = ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(invokers.get(0).getUrl()
                     .getMethodParameter(RpcUtils.getMethodName(invocation), Constants.LOADBALANCE_KEY, Constants.DEFAULT_LOADBALANCE));
         }
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
+        // 根据调用上下文，服务提供者列表，负载均衡算法选择一服务提供者，具体代码由AbstractClusterInvoker的各个子类实现。
         return doInvoke(invocation, invokers, loadbalance);
     }
 
@@ -275,6 +285,14 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
     protected abstract Result doInvoke(Invocation invocation, List<Invoker<T>> invokers,
                                        LoadBalance loadbalance) throws RpcException;
 
+    /**
+     * 最终会调用RegistryDirecotry的list方法，该方法的服务提供者是当该消费者订阅的服务的服务提供者列表发送变化后，会在注册中心产生事件，
+     * 然后通知消费者更新服务提供者列表（本地缓存）。需要注意的是RegistryDirecotry在返回Invoker之前，已经使用Router进行了一次筛选，具体实现在RegistryDirectory#notify方法时。
+     *
+     * @param invocation
+     * @return
+     * @throws RpcException
+     */
     protected List<Invoker<T>> list(Invocation invocation) throws RpcException {
         List<Invoker<T>> invokers = directory.list(invocation);
         return invokers;

@@ -35,7 +35,8 @@ import java.util.List;
  * <a href="http://en.wikipedia.org/wiki/Fail-safe">Fail-safe</a>
  *
  * 通过< dubbo:service cluster = "failsafe" /> 或 < dubbo:reference cluster="failsafe" />
- * 集群策略：服务调用后，只打印错误日志，然后直接返回。
+ * 集群策略：服务调用后，如果失败，只打印错误日志，然后直接返回服务调用成功。
+ * 场景：调用审计，日志等服务接口
  */
 public class FailsafeClusterInvoker<T> extends AbstractClusterInvoker<T> {
     private static final Logger logger = LoggerFactory.getLogger(FailsafeClusterInvoker.class);
@@ -50,6 +51,7 @@ public class FailsafeClusterInvoker<T> extends AbstractClusterInvoker<T> {
             checkInvokers(invokers, invocation);
             Invoker<T> invoker = select(loadbalance, invocation, invokers, null);
             return invoker.invoke(invocation);
+            // 发起RPC服务调用，如果出现异常，记录错误堆栈信息，并返回成功。
         } catch (Throwable e) {
             logger.error("Failsafe ignore exception: " + e.getMessage(), e);
             return new RpcResult(); // ignore

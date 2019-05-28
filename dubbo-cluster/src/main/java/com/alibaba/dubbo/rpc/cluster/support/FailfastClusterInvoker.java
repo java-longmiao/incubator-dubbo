@@ -35,7 +35,7 @@ import java.util.List;
  *
  * 通过< dubbo:service cluster = "failfast" /> 或 < dubbo:reference cluster="failfast" />
  * 集群策略：服务调用后，快速失败，直接抛出异常，并不重试，也不受retries参数的制约，适合新增、修改类操作。
- *
+ * 场景：是否修改类服务（未实行幂等的服务调用）
  */
 public class FailfastClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
@@ -49,6 +49,7 @@ public class FailfastClusterInvoker<T> extends AbstractClusterInvoker<T> {
         Invoker<T> invoker = select(loadbalance, invocation, invokers, null);
         try {
             return invoker.invoke(invocation);
+            // 失败直接抛出含有服务提供者、服务消费者的异常信息
         } catch (Throwable e) {
             if (e instanceof RpcException && ((RpcException) e).isBiz()) { // biz exception.
                 throw (RpcException) e;
